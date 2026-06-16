@@ -25,8 +25,18 @@ type Scope = NonNullable<InstallOptions["scope"]>;
 const DEFAULT_PACKAGE = "whats-next-mcp@latest";
 const DEFAULT_SCOPE: Scope = "user";
 
+// Bound the turn-end hook so a slow/cold `npx` fetch can't block Claude for the
+// 600s default. The hook is deterministic and fast once the package is cached.
+const HOOK_TIMEOUT_SECONDS = 60;
+
 function isRecord(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** The user-level Claude config dir, honoring CLAUDE_CONFIG_DIR if set. */
+function userClaudeDir(): string {
+  const override = process.env.CLAUDE_CONFIG_DIR?.trim();
+  return override ? override : join(homedir(), ".claude");
 }
 
 /**
@@ -34,12 +44,14 @@ function isRecord(value: unknown): value is JsonObject {
  * Code's conventions: User → ~/.claude/settings.json, Project →
  * .claude/settings.json, Local → .claude/settings.local.json. This keeps the
  * hook in the SAME scope as the MCP registration, so a `--scope project`
- * install doesn't silently enable the turn-end hook globally.
+ * install doesn't silently enable the turn-end hook globally. The user path
+ * honors CLAUDE_CONFIG_DIR so isolated configs get the hook in the file their
+ * sessions actually load.
  */
 export function settingsPathForScope(scope: Scope): string {
   switch (scope) {
     case "user":
-      return join(homedir(), ".claude", "settings.json");
+      return join(userClaudeDir(), "settings.json");
     case "project":
       return join(process.cwd(), ".claude", "settings.json");
     case "local":
@@ -102,6 +114,7 @@ export function upsertClaudeStopHook(
         {
           type: "command",
           command,
+          timeout: HOOK_TIMEOUT_SECONDS,
         },
       ],
     });
@@ -252,6 +265,16 @@ export function installClaude(options: InstallOptions = {}): ClaudeInstallResult
   writeJson(settingsPath, settings);
   messages.push(`${status === "updated" ? "Updated" : "Added"} Claude Stop hook in ${settingsPath}.`);
 
+  // Local-scope settings can end up untracked: Claude Code only auto-ignores
+  // settings.local.json when it creates the file itself. We won't touch the
+  // user's .gitignore, but we warn so private hook config isn't committed.
+  if (scope === "local" && !options.settingsPath) {
+    messages.push(
+      "Note: this wrote .claude/settings.local.json. If it isn't already " +
+        "git-ignored, add it to .gitignore so local settings aren't committed."
+    );
+  }
+
   return { mcp, hook: status, settingsPath, messages };
 }
 
@@ -280,7 +303,13 @@ function readOption(args: string[], name: string): string | undefined {
   const i = args.indexOf(name);
   if (i < 0) return undefined;
   const value = args[i + 1];
-  return value && !value.startsWith("--") ? value : undefined;
+  // Present but missing its value (end of args, or another flag follows) is a
+  // user error — reject it instead of silently falling back to a default, which
+  // could e.g. turn a mistyped `--settings` into a write to the default path.
+  if (value === undefined || value.startsWith("--")) {
+    throw new Error(`Missing value for ${name}`);
+  }
+  return value;
 }
 
 export function runInstallCli(args: string[] = process.argv.slice(2)): void {
@@ -319,5 +348,17 @@ export function runInstallCli(args: string[] = process.argv.slice(2)): void {
   });
 
   process.stdout.write(result.messages.join("\n") + "\n");
+
+  // Don't report a clean "Done" when part of the install actually failed —
+  // scripted/one-command installs need a non-zero exit to notice.
+  const failed = result.mcp === "failed" || result.hook === "skipped";
+  if (failed) {
+    process.stdout.write(
+      "Finished with problems — see the messages above and re-run after fixing.\n"
+    );
+    process.exitCode = 1;
+    return;
+  }
+
   process.stdout.write("Done. Restart Claude Code if it was already running.\n");
 }

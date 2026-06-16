@@ -34,6 +34,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Fatal:` stack trace.
 - Warn when a `whats-next` MCP entry already exists, since an old local/project
   registration outranks a new user-scope install.
+- The installed Stop hook now sets a 60s `timeout`, so a slow/cold `npx` fetch
+  can't block turn-end for the 600s default.
+- The user-scope hook path honors `CLAUDE_CONFIG_DIR` for isolated configs.
+- `install` exits non-zero when MCP registration fails or the hook is skipped,
+  instead of always reporting success.
+- Value-taking flags (`--scope`, `--settings`, `--package`) now error on a
+  missing value instead of silently falling back to defaults.
+- The installer no longer rewrites `settings.json` when the hook is already
+  present, and warns about untracked `.claude/settings.local.json` for
+  `--scope local`.
 
 ## [0.1.1] — 2026-06-16
 

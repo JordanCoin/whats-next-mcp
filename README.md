@@ -137,10 +137,12 @@ npm install
 npm run build
 ```
 
-Then point a host at the local build:
+Then point a host at the local build. Use an **absolute** path — a user-scoped
+server is reused from every project, so a relative `./dist/index.js` would
+resolve against whatever directory Claude launches in:
 
 ```bash
-claude mcp add --scope user whats-next-local -- node ./dist/index.js
+claude mcp add --scope user whats-next-local -- node "$(pwd)/dist/index.js"
 ```
 
 ## Environment

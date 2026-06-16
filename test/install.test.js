@@ -9,6 +9,7 @@ import {
   settingsPathForScope,
   parseSettingsContent,
   installClaude,
+  runInstallCli,
 } from "../dist/install.js";
 
 test("adds the Claude Stop hook to empty settings", () => {
@@ -23,6 +24,7 @@ test("adds the Claude Stop hook to empty settings", () => {
             {
               type: "command",
               command: "whats-next-hook",
+              timeout: 60,
             },
           ],
         },
@@ -144,4 +146,46 @@ test("installClaude leaves the settings file untouched when the hook is unchange
   assert.equal(result.hook, "unchanged");
   // Byte-for-byte identical — not reformatted.
   assert.equal(readFileSync(path, "utf8"), original);
+});
+
+test("settingsPathForScope honors CLAUDE_CONFIG_DIR for the user scope", () => {
+  const prev = process.env.CLAUDE_CONFIG_DIR;
+  try {
+    process.env.CLAUDE_CONFIG_DIR = "/tmp/custom-claude";
+    assert.equal(
+      settingsPathForScope("user"),
+      join("/tmp/custom-claude", "settings.json")
+    );
+    // project/local are cwd-relative and ignore the override.
+    assert.equal(
+      settingsPathForScope("project"),
+      join(process.cwd(), ".claude", "settings.json")
+    );
+  } finally {
+    if (prev === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+    else process.env.CLAUDE_CONFIG_DIR = prev;
+  }
+});
+
+test("runInstallCli rejects a flag given without a value", () => {
+  assert.throws(
+    () => runInstallCli(["install", "claude", "--settings", "--dry-run"]),
+    /Missing value for --settings/
+  );
+  assert.throws(
+    () => runInstallCli(["install", "claude", "--scope"]),
+    /Missing value for --scope/
+  );
+});
+
+test("installClaude skips (does not clobber) a malformed settings file", () => {
+  const dir = mkdtempSync(join(tmpdir(), "wn-bad-"));
+  const path = join(dir, "settings.json");
+  const original = "{ not valid json";
+  writeFileSync(path, original);
+
+  const result = installClaude({ skipMcp: true, settingsPath: path });
+
+  assert.equal(result.hook, "skipped");
+  assert.equal(readFileSync(path, "utf8"), original); // untouched
 });
