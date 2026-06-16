@@ -1,0 +1,68 @@
+name: Release
+
+# Two ways to ship to npm:
+#
+#   1. Automated — push a `release-X.Y.Z` branch. CI builds + tests, verifies the
+#      branch name matches package.json, then publishes automatically.
+#   2. Manual ("click deploy") — run this workflow from the Actions tab
+#      (workflow_dispatch). Use this when you did NOT cut a release-* branch.
+#
+# The `publish` job runs in the `release` environment, so it shows up as a
+# deployment. Add required reviewers to that environment if you want the manual
+# path to also need an approval click.
+on:
+  push:
+    branches: ["release-*"]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: node --test
+      - name: Verify branch name matches package.json version
+        run: |
+          PKG="$(node -p "require('./package.json').version")"
+          echo "package.json version: $PKG"
+          # Only enforce the name match on the automated release-branch path.
+          case "$GITHUB_REF_NAME" in
+            release-*)
+              WANT="${GITHUB_REF_NAME#release-}"
+              if [ "$WANT" != "$PKG" ]; then
+                echo "Branch $GITHUB_REF_NAME implies version $WANT but package.json is $PKG" >&2
+                exit 1
+              fi
+              echo "Branch matches package.json ($PKG) — proceeding to publish."
+              ;;
+            *)
+              echo "Manual dispatch — publishing package.json version $PKG."
+              ;;
+          esac
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: release # gate: configure required reviewers for click-to-approve
+    permissions:
+      contents: read
+      id-token: write # required for npm provenance
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Publish to npm
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
