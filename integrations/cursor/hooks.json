@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "hooks": {
+    "stop": [
+      {
+        "command": "node /Users/jordan/Code/whats-next-mcp/dist/cursor-hook.js",
+        "loop_limit": 10
+      }
+    ]
+  }
+}

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+.env
+
+# Local Claude Code settings (machine-specific hook paths)
+.claude/settings.json
+.claude/settings.local.json
