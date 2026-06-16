@@ -23,6 +23,7 @@ import { z } from "zod";
 
 import { type SuggestInput } from "./scaffold.js";
 import { composePickerInstruction } from "./engine.js";
+import { runInstallCli } from "./install.js";
 
 // Read the version from package.json at runtime so it never drifts from the
 // published package. dist/index.js -> ../package.json resolves to the root.
@@ -74,6 +75,11 @@ function textResult(text: string) {
 }
 
 async function main() {
+  if (process.argv[2] === "install" || process.argv[2] === "--help" || process.argv[2] === "-h") {
+    runInstallCli(process.argv.slice(2));
+    return;
+  }
+
   const transport = new StdioServerTransport();
   await server.connect(transport);
   // stderr is safe for logs; stdout is reserved for the MCP protocol.

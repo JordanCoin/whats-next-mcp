@@ -47,28 +47,39 @@ useful work simply by returning a well-crafted instruction — here, "render
 these as an interactive picker, then call `suggest_next` again after acting."
 The host model does the rendering, on demand.
 
-## Install
+## Quick install
 
 ```bash
-npm install
-npm run build
+npx -y whats-next-mcp@latest install claude
 ```
 
-## Configure your MCP host
+That one command:
 
-### Claude Code
+- registers the `whats-next` MCP server in Claude Code
+- adds the Claude Code `Stop` hook, so the picker appears at turn-end
+- uses `npx`, so there is nothing to clone or build
+- works with no API key
+
+Restart Claude Code if it was already open.
+
+Want to preview what it will change?
 
 ```bash
-claude mcp add whats-next -- node /absolute/path/to/whats-next-mcp/dist/index.js
+npx -y whats-next-mcp@latest install claude --dry-run
 ```
 
-Or, once published to npm:
+## Manual setup
+
+Use this if you want to wire things yourself or install into a project instead
+of your user-level Claude Code config.
+
+### Claude Code MCP server
 
 ```bash
-claude mcp add whats-next -- npx -y whats-next-mcp
+claude mcp add --scope user whats-next -- npx -y whats-next-mcp@latest
 ```
 
-### Claude Code — the turn-end guarantee (Stop hook)
+### Claude Code turn-end hook
 
 Add to `~/.claude/settings.json` (or a project `.claude/settings.json`):
 
@@ -80,7 +91,7 @@ Add to `~/.claude/settings.json` (or a project `.claude/settings.json`):
         "hooks": [
           {
             "type": "command",
-            "command": "node /absolute/path/to/whats-next-mcp/dist/hook.js"
+            "command": "npx -y -p whats-next-mcp@latest whats-next-hook"
           }
         ]
       }
@@ -90,10 +101,10 @@ Add to `~/.claude/settings.json` (or a project `.claude/settings.json`):
 ```
 
 Now every time the agent finishes, it presents ranked next steps before going
-quiet — you're never left without a direction. The hook is deterministic and
-offline (no API call), so it doesn't slow down turn-end.
+quiet — you're never left without a direction. The hook uses deterministic
+suggestions, so no Anthropic API call is made at turn-end.
 
-### opencode / other hosts
+### Other MCP hosts
 
 Add to the host's MCP config:
 
@@ -101,12 +112,35 @@ Add to the host's MCP config:
 {
   "mcpServers": {
     "whats-next": {
-      "command": "node",
-      "args": ["/absolute/path/to/whats-next-mcp/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "whats-next-mcp@latest"],
       "env": { "ANTHROPIC_API_KEY": "sk-... (optional)" }
     }
   }
 }
+```
+
+### CLI-only use
+
+You can also ask for deterministic next-step suggestions from any shell:
+
+```bash
+npx -y -p whats-next-mcp@latest whats-next --goal "ship the parser"
+```
+
+## Develop from source
+
+```bash
+git clone https://github.com/JordanCoin/whats-next-mcp.git
+cd whats-next-mcp
+npm install
+npm run build
+```
+
+Then point a host at the local build:
+
+```bash
+claude mcp add --scope user whats-next-local -- node ./dist/index.js
 ```
 
 ## Environment

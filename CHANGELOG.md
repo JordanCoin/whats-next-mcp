@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] — 2026-06-16
+
+### Added
+
+- Added `npx -y whats-next-mcp@latest install claude` for one-command Claude
+  Code setup.
+- Added tests for safely merging the Claude Code `Stop` hook without removing
+  existing hooks.
+
+### Changed
+
+- Reworked the README around the npm install path, with manual/source setup as
+  fallback documentation.
+
 ## [0.1.1] — 2026-06-16
 
 ### Changed
@@ -33,6 +47,7 @@ Initial release.
   dedup/cap/escaping, and tolerant JSON parsing.
 - **CI** — GitHub Actions running build + tests on Node 18, 20, and 22.
 
-[Unreleased]: https://github.com/JordanCoin/whats-next-mcp/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/JordanCoin/whats-next-mcp/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/JordanCoin/whats-next-mcp/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/JordanCoin/whats-next-mcp/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/JordanCoin/whats-next-mcp/releases/tag/v0.1.0
