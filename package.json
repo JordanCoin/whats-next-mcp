@@ -1,7 +1,7 @@
 {
   "name": "whats-next-mcp",
-  "version": "0.1.0",
-  "description": "An MCP server that guarantees an agent always has suggestions for what to do next — a recursive 'never a dead end' companion for Claude Code, opencode, and any MCP host.",
+  "version": "0.1.1",
+  "description": "An MCP server that guarantees an AI coding agent never hits a dead end — always returns concrete, ranked next-step suggestions as an interactive picker. Works with Claude Code, Cursor, opencode, and any MCP host.",
   "type": "module",
   "bin": {
     "whats-next-mcp": "dist/index.js",
