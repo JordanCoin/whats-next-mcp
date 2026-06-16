@@ -1,12 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { homedir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join, sep } from "node:path";
+import { mkdtempSync, writeFileSync, readFileSync } from "node:fs";
 
 import {
   upsertClaudeStopHook,
   settingsPathForScope,
   parseSettingsContent,
+  installClaude,
 } from "../dist/install.js";
 
 test("adds the Claude Stop hook to empty settings", () => {
@@ -125,4 +127,21 @@ test("parseSettingsContent accepts empty and valid object content", () => {
     value: { hooks: {} },
     malformed: false,
   });
+});
+
+test("installClaude leaves the settings file untouched when the hook is unchanged", () => {
+  const dir = mkdtempSync(join(tmpdir(), "wn-install-"));
+  const path = join(dir, "settings.json");
+  // Seed with the hook already present, but with different formatting (extra
+  // whitespace) so a needless rewrite would be detectable.
+  const command = "npx -y -p whats-next-mcp@latest whats-next-hook";
+  const seeded = upsertClaudeStopHook({}, command).settings;
+  const original = JSON.stringify(seeded, null, 4) + "\n\n";
+  writeFileSync(path, original);
+
+  const result = installClaude({ skipMcp: true, settingsPath: path });
+
+  assert.equal(result.hook, "unchanged");
+  // Byte-for-byte identical — not reformatted.
+  assert.equal(readFileSync(path, "utf8"), original);
 });

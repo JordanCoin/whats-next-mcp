@@ -242,8 +242,15 @@ export function installClaude(options: InstallOptions = {}): ClaudeInstallResult
     return { mcp, hook: "dry-run", settingsPath, messages };
   }
 
+  // Nothing to change — don't rewrite the file (avoids reformatting it and
+  // bumping its mtime for a no-op).
+  if (status === "unchanged") {
+    messages.push(`Claude Stop hook already present in ${settingsPath}.`);
+    return { mcp, hook: status, settingsPath, messages };
+  }
+
   writeJson(settingsPath, settings);
-  messages.push(`${status === "unchanged" ? "Kept" : status === "updated" ? "Updated" : "Added"} Claude Stop hook in ${settingsPath}.`);
+  messages.push(`${status === "updated" ? "Updated" : "Added"} Claude Stop hook in ${settingsPath}.`);
 
   return { mcp, hook: status, settingsPath, messages };
 }
@@ -255,8 +262,8 @@ function usage(): string {
     "",
     "Options:",
     "  --scope user|local|project   Install scope; also picks the hook settings",
-    "                               file (default: user). local/project write to",
-    "                               ./.claude/.",
+    "                               file. local/project use ./.claude/ in the cwd",
+    "                               (default: user).",
     "  --settings <path>            Override the hook settings file path.",
     "  --package <spec>             npm spec to install (default: whats-next-mcp@latest).",
     "  --skip-mcp                   Only add the hook; skip `claude mcp add`.",
