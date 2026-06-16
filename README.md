@@ -1,5 +1,9 @@
 # whats-next-mcp
 
+[![CI](https://github.com/JordanCoin/whats-next-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/JordanCoin/whats-next-mcp/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/whats-next-mcp.svg)](https://www.npmjs.com/package/whats-next-mcp)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 An [MCP](https://modelcontextprotocol.io) server that guarantees an agent
 **always has concrete suggestions for what to do next** — a recursive
 "never a dead end" companion for Claude Code, opencode, Cursor, Zed, and any

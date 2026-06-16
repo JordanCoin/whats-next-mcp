@@ -22,13 +22,29 @@
   "keywords": [
     "mcp",
     "model-context-protocol",
+    "mcp-server",
     "claude",
+    "claude-code",
+    "cursor",
     "opencode",
+    "anthropic",
     "agent",
+    "ai-agents",
+    "llm",
     "suggestions",
-    "next-steps"
+    "next-steps",
+    "coding-assistant"
   ],
+  "author": "Jordan Coin Jackson",
   "license": "MIT",
+  "homepage": "https://github.com/JordanCoin/whats-next-mcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JordanCoin/whats-next-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/JordanCoin/whats-next-mcp/issues"
+  },
   "engines": {
     "node": ">=18"
   },
