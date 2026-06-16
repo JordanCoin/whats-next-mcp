@@ -20,6 +20,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Reworked the README around the npm install path, with manual/source setup as
   fallback documentation.
+- `install claude` now writes the Stop hook to the settings file matching
+  `--scope` (user → `~/.claude/settings.json`, project → `.claude/settings.json`,
+  local → `.claude/settings.local.json`) instead of always the user file.
+
+### Fixed
+
+- The installer no longer aborts (or overwrites) when the target
+  `settings.json` contains invalid JSON — it skips the hook and explains how to
+  proceed.
+- `install --help` (help flag in any position) now prints usage.
+- Installer CLI errors render a clean message and exit non-zero instead of a
+  `Fatal:` stack trace.
+- Warn when a `whats-next` MCP entry already exists, since an old local/project
+  registration outranks a new user-scope install.
 
 ## [0.1.1] — 2026-06-16
 

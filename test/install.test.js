@@ -1,7 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { homedir } from "node:os";
+import { join, sep } from "node:path";
 
-import { upsertClaudeStopHook } from "../dist/install.js";
+import {
+  upsertClaudeStopHook,
+  settingsPathForScope,
+  parseSettingsContent,
+} from "../dist/install.js";
 
 test("adds the Claude Stop hook to empty settings", () => {
   const { settings, status } = upsertClaudeStopHook({}, "whats-next-hook");
@@ -87,4 +93,36 @@ test("leaves an identical whats-next hook unchanged", () => {
 
   assert.equal(status, "unchanged");
   assert.deepEqual(settings, existing);
+});
+
+test("settingsPathForScope maps each scope to the right file", () => {
+  assert.equal(
+    settingsPathForScope("user"),
+    join(homedir(), ".claude", "settings.json")
+  );
+  assert.equal(
+    settingsPathForScope("project"),
+    join(process.cwd(), ".claude", "settings.json")
+  );
+  assert.equal(
+    settingsPathForScope("local"),
+    join(process.cwd(), ".claude", "settings.local.json")
+  );
+  // project/local stay in the working tree, not the home dir.
+  assert.ok(!settingsPathForScope("project").startsWith(homedir() + sep + ".claude"));
+});
+
+test("parseSettingsContent flags malformed JSON without throwing", () => {
+  assert.deepEqual(parseSettingsContent("{ not json"), { value: {}, malformed: true });
+  assert.deepEqual(parseSettingsContent("[]"), { value: {}, malformed: true }); // not an object
+  assert.deepEqual(parseSettingsContent('"a string"'), { value: {}, malformed: true });
+});
+
+test("parseSettingsContent accepts empty and valid object content", () => {
+  assert.deepEqual(parseSettingsContent(""), { value: {}, malformed: false });
+  assert.deepEqual(parseSettingsContent("   \n"), { value: {}, malformed: false });
+  assert.deepEqual(parseSettingsContent('{"hooks":{}}'), {
+    value: { hooks: {} },
+    malformed: false,
+  });
 });

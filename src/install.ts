@@ -15,7 +15,7 @@ export interface InstallOptions {
 
 export interface ClaudeInstallResult {
   mcp: "added" | "skipped" | "failed";
-  hook: "added" | "updated" | "unchanged" | "dry-run";
+  hook: "added" | "updated" | "unchanged" | "dry-run" | "skipped";
   settingsPath: string;
   messages: string[];
 }
@@ -29,8 +29,22 @@ function isRecord(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function defaultClaudeSettingsPath(): string {
-  return join(homedir(), ".claude", "settings.json");
+/**
+ * The settings file the Stop hook belongs in for each scope, following Claude
+ * Code's conventions: User → ~/.claude/settings.json, Project →
+ * .claude/settings.json, Local → .claude/settings.local.json. This keeps the
+ * hook in the SAME scope as the MCP registration, so a `--scope project`
+ * install doesn't silently enable the turn-end hook globally.
+ */
+export function settingsPathForScope(scope: Scope): string {
+  switch (scope) {
+    case "user":
+      return join(homedir(), ".claude", "settings.json");
+    case "project":
+      return join(process.cwd(), ".claude", "settings.json");
+    case "local":
+      return join(process.cwd(), ".claude", "settings.local.json");
+  }
 }
 
 function hookCommand(packageSpec = DEFAULT_PACKAGE): string {
@@ -99,9 +113,33 @@ export function upsertClaudeStopHook(
   return { settings, status };
 }
 
-function readJson(path: string): unknown {
-  if (!existsSync(path)) return {};
-  return JSON.parse(readFileSync(path, "utf8"));
+/**
+ * Parse settings-file content without throwing. Malformed JSON (or valid JSON
+ * that isn't an object) is flagged rather than swallowed: unlike the read-only
+ * hooks elsewhere, the installer WRITES the file back, so silently treating bad
+ * JSON as `{}` would clobber a user's recoverable, hand-edited settings.
+ */
+export function parseSettingsContent(content: string): {
+  value: JsonObject;
+  malformed: boolean;
+} {
+  const trimmed = content.trim();
+  if (!trimmed) return { value: {}, malformed: false };
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (!isRecord(parsed)) return { value: {}, malformed: true };
+    return { value: parsed, malformed: false };
+  } catch {
+    return { value: {}, malformed: true };
+  }
+}
+
+function readSettingsFile(path: string): {
+  value: JsonObject;
+  malformed: boolean;
+} {
+  if (!existsSync(path)) return { value: {}, malformed: false };
+  return parseSettingsContent(readFileSync(path, "utf8"));
 }
 
 function writeJson(path: string, value: unknown): void {
@@ -139,10 +177,29 @@ function installMcpServer(options: { packageSpec: string; scope: Scope }) {
   };
 }
 
+/**
+ * Best-effort check for an existing `whats-next` MCP entry before we add one.
+ * The old README registered the server at Claude Code's default (local) scope,
+ * which OUTRANKS a user-scope install — so a user upgrading would otherwise keep
+ * launching the stale local server. We can't reliably parse per-scope precedence
+ * from `claude mcp list`, so we just detect prior existence and warn. Returns
+ * false on any error (CLI missing, non-zero exit), i.e. never blocks the install.
+ */
+function hasExistingWhatsNextMcp(): boolean {
+  const result = spawnSync("claude", ["mcp", "list"], {
+    encoding: "utf8",
+    stdio: "pipe",
+  });
+  if (result.error || result.status !== 0 || typeof result.stdout !== "string") {
+    return false;
+  }
+  return /whats-next\b/.test(result.stdout);
+}
+
 export function installClaude(options: InstallOptions = {}): ClaudeInstallResult {
   const packageSpec = options.packageSpec ?? DEFAULT_PACKAGE;
   const scope = options.scope ?? DEFAULT_SCOPE;
-  const settingsPath = options.settingsPath ?? defaultClaudeSettingsPath();
+  const settingsPath = options.settingsPath ?? settingsPathForScope(scope);
   const messages: string[] = [];
 
   let mcp: ClaudeInstallResult["mcp"] = "skipped";
@@ -151,13 +208,33 @@ export function installClaude(options: InstallOptions = {}): ClaudeInstallResult
   } else if (options.skipMcp) {
     messages.push("Skipped MCP registration.");
   } else {
+    const preexisting = hasExistingWhatsNextMcp();
     const result = installMcpServer({ packageSpec, scope });
     mcp = result.status;
     messages.push(result.message);
+    if (preexisting && result.status === "added") {
+      messages.push(
+        "Note: a 'whats-next' MCP entry already existed. If it was added at a " +
+          "higher-precedence scope (local/project outranks user), Claude may " +
+          "still launch the old one — inspect with `claude mcp list` and remove " +
+          "stale entries with `claude mcp remove whats-next`."
+      );
+    }
   }
 
   const command = hookCommand(packageSpec);
-  const current = readJson(settingsPath);
+  const { value: current, malformed } = readSettingsFile(settingsPath);
+
+  // Don't overwrite a settings file we couldn't parse — that would destroy the
+  // user's (recoverable) config. Tell them how to proceed instead.
+  if (malformed) {
+    messages.push(
+      `Skipped the Stop hook: ${settingsPath} is not valid JSON. Fix it (or ` +
+        `pass --settings <path>) and re-run, or add the hook manually:\n  ${command}`
+    );
+    return { mcp, hook: "skipped", settingsPath, messages };
+  }
+
   const { settings, status } = upsertClaudeStopHook(current, command);
 
   if (options.dryRun) {
@@ -174,11 +251,21 @@ export function installClaude(options: InstallOptions = {}): ClaudeInstallResult
 function usage(): string {
   return [
     "Usage:",
-    "  whats-next-mcp install claude [--scope user|local|project] [--dry-run]",
+    "  whats-next-mcp install claude [options]",
+    "",
+    "Options:",
+    "  --scope user|local|project   Install scope; also picks the hook settings",
+    "                               file (default: user). local/project write to",
+    "                               ./.claude/.",
+    "  --settings <path>            Override the hook settings file path.",
+    "  --package <spec>             npm spec to install (default: whats-next-mcp@latest).",
+    "  --skip-mcp                   Only add the hook; skip `claude mcp add`.",
+    "  --dry-run                    Print what would change without writing.",
     "",
     "Examples:",
     "  npx -y whats-next-mcp@latest install claude",
     "  npx -y whats-next-mcp@latest install claude --dry-run",
+    "  npx -y whats-next-mcp@latest install claude --scope project",
   ].join("\n");
 }
 
@@ -190,8 +277,14 @@ function readOption(args: string[], name: string): string | undefined {
 }
 
 export function runInstallCli(args: string[] = process.argv.slice(2)): void {
+  // Accept --help/-h anywhere (e.g. `install --help`), not just as the first arg.
+  if (args.includes("--help") || args.includes("-h")) {
+    process.stdout.write(usage() + "\n");
+    return;
+  }
+
   const command = args[0];
-  if (!command || command === "--help" || command === "-h") {
+  if (!command) {
     process.stdout.write(usage() + "\n");
     return;
   }

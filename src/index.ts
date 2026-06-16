@@ -75,8 +75,19 @@ function textResult(text: string) {
 }
 
 async function main() {
-  if (process.argv[2] === "install" || process.argv[2] === "--help" || process.argv[2] === "-h") {
-    runInstallCli(process.argv.slice(2));
+  const argv = process.argv.slice(2);
+  if (argv[0] === "install" || argv.includes("--help") || argv.includes("-h")) {
+    // The installer is a user-facing CLI: render a clean error and set a
+    // non-zero exit code instead of letting it surface as a "Fatal:" stack
+    // trace through the MCP server's top-level catch.
+    try {
+      runInstallCli(argv);
+    } catch (err) {
+      process.stderr.write(
+        (err instanceof Error ? err.message : String(err)) + "\n"
+      );
+      process.exitCode = 1;
+    }
     return;
   }
 
