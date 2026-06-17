@@ -7,12 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] — 2026-06-17
+
 ### Added
 
 - **gstack mode** (`--gstack` flag or `WHATS_NEXT_GSTACK=1`): the picker's
   options become gstack workflow skills (`/spec`, `/qa`, `/review`, `/ship`,
   `/retro`) mapped to the current state, instead of generic advice. Honored by
   the MCP tool, both turn-end hooks, and the CLI.
+
+### Fixed
+
+- gstack suggestions dedupe by slash-command, not label, so the failing state
+  no longer offers `/qa` twice (found by dogfooding `/qa`).
 
 ## [0.1.2] — 2026-06-16
 
@@ -78,7 +85,8 @@ Initial release.
   dedup/cap/escaping, and tolerant JSON parsing.
 - **CI** — GitHub Actions running build + tests on Node 18, 20, and 22.
 
-[Unreleased]: https://github.com/JordanCoin/whats-next-mcp/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/JordanCoin/whats-next-mcp/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/JordanCoin/whats-next-mcp/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/JordanCoin/whats-next-mcp/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/JordanCoin/whats-next-mcp/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/JordanCoin/whats-next-mcp/releases/tag/v0.1.0
