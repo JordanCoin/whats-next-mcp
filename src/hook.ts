@@ -32,8 +32,7 @@
 import { readFileSync, writeFileSync, appendFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { fallbackSuggestions } from "./fallback.js";
-import { buildPickerInstruction } from "./engine.js";
+import { buildPickerInstruction, seedSuggestions } from "./engine.js";
 
 interface StopPayload {
   stop_hook_active?: boolean;
@@ -200,7 +199,7 @@ async function main() {
   debug(`FIRE gated=${humanGated} count=${count} session=${payload.session_id ?? "?"}`);
 
   const recent = extractRecent(payload.transcript_path);
-  const seeds = fallbackSuggestions({ recent });
+  const seeds = seedSuggestions({ recent });
 
   const out = {
     decision: "block",

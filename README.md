@@ -128,6 +128,22 @@ You can also ask for deterministic next-step suggestions from any shell:
 npx -y -p whats-next-mcp@latest whats-next --goal "ship the parser"
 ```
 
+### gstack mode
+
+If you run a workflow-skill toolkit like
+[gstack](https://github.com/garrytan/gstack), turn on **gstack mode** and the
+picker's options become gstack skills instead of generic advice — mapped to the
+current state (failing → `/qa`, no goal → `/spec`, green → `/ship`, then
+`/retro`). whats-next is the loop; gstack is the payload.
+
+```bash
+whats-next --gstack --recent "tests passing"   # -> /ship, /retro, ...
+```
+
+Set `WHATS_NEXT_GSTACK=1` to enable it everywhere (the MCP tool and both
+turn-end hooks, not just the CLI). See the gstack section of `AGENTS.md` for the
+full state → skill map.
+
 ## Develop from source
 
 ```bash

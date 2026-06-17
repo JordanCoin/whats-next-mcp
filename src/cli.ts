@@ -12,11 +12,11 @@
  *   whats-next                       # generic seeds + scaffold
  *   whats-next --goal "ship parser"  # tailored to a goal
  *   whats-next --recent "tests fail" # reacts to recent state
+ *   whats-next --gstack              # suggest gstack skills (/qa, /ship, ...)
  *   whats-next --json                # machine-readable seeds only
  */
 
-import { composeDeterministic } from "./engine.js";
-import { fallbackSuggestions } from "./fallback.js";
+import { composeDeterministic, seedSuggestions } from "./engine.js";
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(name);
@@ -26,10 +26,16 @@ function arg(name: string): string | undefined {
   return next && !next.startsWith("--") ? next : undefined;
 }
 
+// `--gstack` flips on gstack mode for this run, same as WHATS_NEXT_GSTACK=1.
+if (process.argv.includes("--gstack")) {
+  process.env.WHATS_NEXT_GSTACK = "1";
+}
+
 const input = { goal: arg("--goal"), recent: arg("--recent") };
 
 if (process.argv.includes("--json")) {
-  process.stdout.write(JSON.stringify(fallbackSuggestions(input), null, 2) + "\n");
+  // Honor gstack mode here too via the shared chooser.
+  process.stdout.write(JSON.stringify(seedSuggestions(input), null, 2) + "\n");
 } else {
   process.stdout.write(composeDeterministic(input) + "\n");
 }

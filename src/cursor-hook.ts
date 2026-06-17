@@ -23,8 +23,7 @@
  *   }
  */
 
-import { fallbackSuggestions } from "./fallback.js";
-import { buildPickerInstruction } from "./engine.js";
+import { buildPickerInstruction, seedSuggestions } from "./engine.js";
 
 interface CursorStopPayload {
   status?: "completed" | "aborted" | "error";
@@ -58,7 +57,7 @@ async function main() {
   }
 
   // Cursor's stop payload carries no transcript path, so seeds are generic.
-  const seeds = fallbackSuggestions({});
+  const seeds = seedSuggestions({});
   const out = { followup_message: buildPickerInstruction(seeds) };
   process.stdout.write(JSON.stringify(out));
   process.exit(0);

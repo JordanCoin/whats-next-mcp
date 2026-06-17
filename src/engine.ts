@@ -12,6 +12,16 @@ import {
   type Suggestion,
 } from "./llm.js";
 import { fallbackSuggestions } from "./fallback.js";
+import { gstackEnabled, gstackSuggestions } from "./gstack.js";
+
+/**
+ * The deterministic seed source for every surface (tool, hook, CLI). In gstack
+ * mode the seeds become gstack skill suggestions; otherwise the generic
+ * never-empty fallback seeds. One chooser keeps all surfaces consistent.
+ */
+export function seedSuggestions(input: SuggestInput): Suggestion[] {
+  return gstackEnabled() ? gstackSuggestions(input) : fallbackSuggestions(input);
+}
 
 /** Escape a field before embedding it in a `label: "..."` line. */
 function escapeField(text: string): string {
@@ -84,7 +94,7 @@ export function buildPickerInstruction(
  * run on every turn-end inside a hook.
  */
 export function composeDeterministic(input: SuggestInput): string {
-  const seeds = fallbackSuggestions(input);
+  const seeds = seedSuggestions(input);
   return (
     renderSuggestions(seeds, /* includeFooter */ false) +
     "\n\n---\n\n" +
@@ -109,7 +119,7 @@ export async function composePickerInstruction(
       return buildPickerInstruction(suggestions, { recurseViaTool: true });
     }
   }
-  return buildPickerInstruction(fallbackSuggestions(input), {
+  return buildPickerInstruction(seedSuggestions(input), {
     recurseViaTool: true,
   });
 }

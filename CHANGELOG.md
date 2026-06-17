@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **gstack mode** (`--gstack` flag or `WHATS_NEXT_GSTACK=1`): the picker's
+  options become gstack workflow skills (`/spec`, `/qa`, `/review`, `/ship`,
+  `/retro`) mapped to the current state, instead of generic advice. Honored by
+  the MCP tool, both turn-end hooks, and the CLI.
+
 ## [0.1.2] — 2026-06-16
 
 ### Added
