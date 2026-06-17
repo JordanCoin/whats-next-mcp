@@ -7,3 +7,6 @@ dist/
 # Local Claude Code settings (machine-specific hook paths)
 .claude/settings.json
 .claude/settings.local.json
+
+# Codemap local cache/artifacts
+.codemap/
