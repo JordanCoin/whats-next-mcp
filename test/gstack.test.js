@@ -65,6 +65,18 @@ test("no duplicate actions", () => {
   assert.equal(new Set(a).size, a.length);
 });
 
+// Regression: gstack failing-state offered /qa twice — once as the "reproduce
+// and fix" lead, once as the core "QA the change" move (different labels, same
+// command). Found by /qa on 2026-06-17. Dedup must key on the slash-command.
+test("no duplicate slash-commands (failing state offered /qa twice)", () => {
+  for (const recent of ["build failing", "tests passing shipped", ""]) {
+    const cmds = gstackSuggestions({ recent })
+      .map((s) => s.startHere.match(/\/[\w-]+/)?.[0])
+      .filter(Boolean);
+    assert.equal(new Set(cmds).size, cmds.length, `dup command for recent="${recent}"`);
+  }
+});
+
 test("seedSuggestions switches sources with WHATS_NEXT_GSTACK", () => {
   const prev = process.env.WHATS_NEXT_GSTACK;
   try {

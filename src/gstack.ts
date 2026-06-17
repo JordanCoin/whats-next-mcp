@@ -106,12 +106,15 @@ export function gstackSuggestions(input: SuggestInput): Suggestion[] {
     );
   }
 
-  // Dedupe by action (defensive — the core moves are distinct from the leads).
+  // Dedupe by the slash-command, not the label: a state-specific lead and a
+  // core move can word the same skill differently (e.g. "Reproduce ... with
+  // /qa" vs "QA the change with /qa") — the picker must never offer one command
+  // twice. The first occurrence wins, so the more specific lead is kept.
   const seen = new Set<string>();
   return seeds.filter((s) => {
-    const key = s.action.toLowerCase();
-    if (seen.has(key)) return false;
-    seen.add(key);
+    const command = s.startHere.match(/\/[\w-]+/)?.[0] ?? s.action.toLowerCase();
+    if (seen.has(command)) return false;
+    seen.add(command);
     return true;
   });
 }
