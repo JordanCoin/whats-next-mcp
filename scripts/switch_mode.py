@@ -102,10 +102,13 @@ def update_mcp(mode: str, scope: str, gstack: bool, dry_run: bool) -> None:
         print("  mcp: `claude` CLI not found — skipping MCP registration")
         return
     remove = ["claude", "mcp", "remove", MCP_NAME]
-    add = ["claude", "mcp", "add", "--scope", scope]
+    # Name MUST come before -e: `claude mcp add`'s -e flag is variadic and will
+    # otherwise swallow the server name as a second env var. Keep -e right
+    # before the `--` command separator so it only collects the env entry.
+    add = ["claude", "mcp", "add", MCP_NAME, "--scope", scope]
     if gstack:
         add += ["-e", "WHATS_NEXT_GSTACK=1"]
-    add += [MCP_NAME, "--", *mcp_command(mode)]
+    add += ["--", *mcp_command(mode)]
 
     print(f"  mcp: {' '.join(add)}")
     if dry_run:
