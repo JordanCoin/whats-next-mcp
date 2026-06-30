@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4] — 2026-06-30
+
+### Fixed
+
+- The Stop hook now stays silent while a backgrounded task — an async agent or a
+  background Workflow/shell — is still running, instead of re-prompting mid-run.
+  Such tasks don't block the main loop: their launch returns an immediate ack
+  (`status: "async_launched"` for agents, a `Task ID:` line for Workflows) and
+  completion is delivered later as a `<task-notification>`. The hook treats a
+  launched task id with no matching notification yet as "still cooking" and lets
+  the turn stop; the harness re-invokes the model when it finishes, so the picker
+  fires once afterward. A bounded tail window means a killed task that never
+  notifies can't suppress the picker forever.
+
 ## [0.1.3] — 2026-06-17
 
 ### Added

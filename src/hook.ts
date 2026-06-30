@@ -33,6 +33,7 @@ import { readFileSync, writeFileSync, appendFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { buildPickerInstruction, seedSuggestions } from "./engine.js";
+import { hasPendingBackgroundTask } from "./transcript.js";
 
 interface StopPayload {
   stop_hook_active?: boolean;
@@ -176,6 +177,14 @@ async function main() {
     payload = JSON.parse(raw || "{}");
   } catch {
     // malformed payload — fail open by allowing the stop
+    process.exit(0);
+  }
+
+  // A background agent (Agent/Task) is still cooking — stay silent. The harness
+  // re-invokes the model when it finishes, and the Stop hook fires again then,
+  // so the picker appears once after the work instead of nagging mid-run.
+  if (hasPendingBackgroundTask(payload.transcript_path)) {
+    debug(`allow-stop pending-bg-task session=${payload.session_id ?? "?"}`);
     process.exit(0);
   }
 
